@@ -1,0 +1,6 @@
+NAME=nokey
+NIMBLE=argparse
+#DEBUG=true
+#COMPRESS=true
+RUNARGS=TEST_VAR
+
