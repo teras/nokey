@@ -28,7 +28,7 @@ if opts.changepass:
     if oldPass == "":
         quit("Empty password provided: aborted")
     let kstore = keystoreLocation.readKeystore(oldPass)
-    let newPass = readPasswordFromStdin("New password: " )
+    let newPass = readPasswordFromStdin("New password: ").strip
     if newPass == "":
         quit("Empty password provided: aborted")
     let newPass2 = readPasswordFromStdin("New password (again): " )
@@ -43,13 +43,26 @@ let pass = opts.password
 if pass=="": quit("No password provided, please see --help")
 let keystore = keystoreLocation.readKeystore(pass)
 
+proc delete(variable:string, failOnError=true):(string,string) = 
+    for groupName,groupNode in keystore:
+        for key,value in groupNode:
+            if key == variable:
+                groupNode.delete(key)
+                if groupNode.len == 0:
+                    keystore.delete(groupName)
+                return (groupName,value.getStr)
+    if failOnError:
+        quit("Unable to locate variable " & variable)
+    return ("", "")
+
 proc add(variable:string, value:string, newgroup="") =
-    let cgroup = if newgroup == "": group else: newgroup
+    let (oldgroup,_) = delete(variable, false)
+    let cgroup = if newgroup == "": (if oldgroup != "" and opts.group == "": oldgroup else: group) else: newgroup
     var value = value
     if not variable.match(re"[A-Z][A-Z0-9_]*"):
         quit("Invalid variable name: " & variable)
     if value == "":
-        value = readPasswordFromStdin("Please input data for variable " & variable & " (group " & cgroup & "): " )
+        value = readPasswordFromStdin("Please input data for variable " & variable & " (group " & cgroup & "): " ).strip
     if value == "":
         quit("Unable to add empty value")
     let node =
@@ -60,16 +73,6 @@ proc add(variable:string, value:string, newgroup="") =
             keystore.add(cgroup, n)
             n
     node.add(variable, %value)
-
-proc delete(variable:string):(string,string) = 
-    for groupName,groupNode in keystore:
-        for key,value in groupNode:
-            if key == variable:
-                groupNode.delete(key)
-                if groupNode.len == 0:
-                    keystore.delete(groupName)
-                return (groupName,value.getStr)
-    quit("Unable to locate variable " & variable)
 
 if opts.rename != "":
     if opts.to == "":
