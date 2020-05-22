@@ -8,18 +8,21 @@ template echoNoLine(txt:string) =
     stdout.write txt
     stdout.flushFile
 
-proc storeKeystore*(content:JsonNode, location:string, pass:string) =
+proc store(content:string, location:string, pass:string) =
     location.parentDir.createDir
-    var(text,exitCode) = myExec(@[OPENSSL, "enc", "-salt", "-a", "-aes-256-cbc", "-pass", "pass:"&pass, "-out", location], $content)
+    var(text,_) = myExec(@[OPENSSL, "enc", "-salt", "-a", "-aes-256-cbc", "-pass", "pass:"&pass, "-out", location], $content)
     echoNoLine text
-    if exitCode != 0:
-        quit("Unable to store keychain under " & location)
 
-proc readKeystore*(location:string, pass:string):JsonNode =
-    var text = """{}"""
+proc read(location:string, pass:string):string =
+    result = """{}"""
     if location.fileExists:
-        var exitCode:int
-        (text,exitCode) = myExec(@[OPENSSL, "enc", "-d", "-salt", "-a", "-aes-256-cbc", "-pass", "pass:"&pass, "-in", location])
-        if exitCode != 0: quit("Unable to read keystore")
-    result = text.parseJson
-    result.storeKeystore(location, pass)
+        var ec:int
+        (result,ec) = myExec(@[OPENSSL, "enc", "-d", "-salt", "-a", "-aes-256-cbc", "-pass", "pass:"&pass, "-in", location])
+
+proc storeKeystore*(content:JsonNode, location:string, pass:string) =
+    let data = $content
+    store(data, location, pass)
+    if data != read(location, pass):
+        echo "Unable to save data"
+
+proc readKeystore*(location:string, pass:string):JsonNode = read(location, pass).parseJson
