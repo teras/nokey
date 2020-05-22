@@ -39,8 +39,13 @@ if opts.changepass:
     kstore.storeKeystore(keystoreLocation, newPass)
     quit(0)
 
-let pass = opts.password
-if pass=="": quit("No password provided, please see --help")
+let pass =
+    if opts.password != "":
+        opts.password
+    else:
+        readPasswordFromStdin("Password: ")
+if pass=="":
+     quit(1)
 let keystore = keystoreLocation.readKeystore(pass)
 
 proc delete(variable:string, failOnError=true):(string,string) = 
